@@ -1,0 +1,17 @@
+{
+  "name": "express4-tedious",
+  "version": "0.1.0",
+  "description": "Express4 middleware that enables you to create REST API using Tedious and SQL Server 2016.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "SQL Server",
+    "Express4",
+    "Tedious",
+    "REST"
+  ],
+  "author": "Jovan Popovic",
+  "license": "MIT"
+}
