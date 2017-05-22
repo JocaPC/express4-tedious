@@ -21,7 +21,7 @@ npm install express4-tedious --save
 
 # Initialize Middleware
 
-In order to initialize data access middleware, you need to add `query` method to your
+In order to initialize data access middleware, you need to add `sql` method to your
 request when you initialize express app and routes:
 
 ```javascript
@@ -30,7 +30,7 @@ var tediousExpress = require('express4-tedious');
 
 var app = express();
 app.use(function (req, res, next) {
-    req.query = tediousExpress(req, {connection object});
+    req.sql = tediousExpress(req, {connection object});
     next();
 });
 ```
@@ -50,18 +50,18 @@ Use `"encrypt": true` if database is hosted in Azure SQL.
 
 # Create REST API
 
-Once you setup middleware, you can easily create REST API using T-SQL queries:
+Once you setup the middleware, you can easily create REST API using T-SQL queries:
 
 ```javascript
 /* GET product listing. */
 router.get('/', function (req, res) {
 
-    req.query("select * from Product for json path")
+    req.sql("select * from Product for json path")
         .into(res, '[]');
 
 });
 ```
-In the `query` method you can specify T-SQL query that should be executed. Method
+In the `sql` method you can specify T-SQL query that should be executed. Method
 `into` will stream results of the query into response object. `[]` will be sent to
 the client if results are not returned by query.
 
@@ -71,7 +71,7 @@ You can also create REST API that uses parameters:
 /* GET product by id. */
 router.get('/:id', function (req, res) {
     
-    req.query("select * from Product where id = @id for json path, without_array_wrapper")
+    req.sql("select * from Product where id = @id for json path, without_array_wrapper")
         .param('id', req.params.id, TYPES.Int)
         .into(res, '{}');
 
@@ -85,7 +85,7 @@ SQL query using `exec` method (without results returned to the client):
 /* PUT update product. */
 router.put('/:id', function (req, res) {
     
-    req.query("exec updateProduct @id, @product")
+    req.sql("exec updateProduct @id, @product")
         .param('id', req.params.id, TYPES.Int)
         .param('product', req.body, TYPES.NVarChar)
         .exec(res);
