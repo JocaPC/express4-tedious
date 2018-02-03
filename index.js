@@ -12,90 +12,60 @@ function tediousExpress(req, config){
             connection: new Connection(config),
             sql: sqlQueryText,
             parameters: [],
+            isEmptyResponse: true,
+            defaultOutput: "",
             param: function(param, value, type){
                 this.parameters.push({name: param, type: type, value: value});
                 return this;
             },
             exec: function(ostream, successResponse) {
                 var request = this.__createRequest(ostream);
-                var fnDoneHandler = this.fnOnDone;
-                request.on('done', function (rowCount, more, rows) {
-                    successResponse && ostream.write(successResponse);
-                    fnDoneHandler && fnDoneHandler('done', ostream);
-                });
-                request.on('doneProc', function (rowCount, more, rows) {
-                    successResponse && ostream.write(successResponse);
-                    fnDoneHandler && fnDoneHandler('doneProc', ostream);
-                });
-                this.__ExecuteRequest(request);
+                this.__ExecuteRequest(request, ostream);
             },
-            into: function(ostream, defaultOutput) {
-                var fnDoneHandler = this.fnOnDone;
+            into: function(ostream, defaultOutput = "[]") {
                 var request = this.__createRequest(ostream);
-                var empty = true;
+                var self = this;
+                self.defaultOutput = defaultOutput;
+                
                 request.on('row', function (columns) {
-                    if(empty) {
-                        console.log('Response fetched from SQL Database!');
-                        empty = false;
+                    if(self.isEmptyResponse) {
+                        self.isEmptyResponse = false;
                     }
                     ostream.write(columns[0].value);
                 });
-                request.on('done', function (rowCount, more, rows) {
-                    try{
-                        if(empty) {
-                            defaultOutput && ostream.write(defaultOutput);
-                        }
-                    } catch(ex){
-                        console.trace(ex);
-                    }
-                    fnDoneHandler && fnDoneHandler('done', ostream);
-                });
-                request.on('doneProc', function (rowCount, more, rows) {
-                    try{
-                        if(empty) {
-                            defaultOutput && ostream.write(defaultOutput);
-                        }
-                    } catch(ex){
-                        console.trace(ex);
-                    }
-                    fnDoneHandler && fnDoneHandler('doneProc', ostream);
-                });
-                this.__ExecuteRequest(request);
-            },
-            done: function(fnDone){
-                this.fnOnDone = fnDone;
-                return this;
-            },
-            fail: function(fnFail){
-                this.fnOnError = fnFail;
-                return this;
+                this.__ExecuteRequest(request, ostream);
             },
             __ExecuteRequest: function(request, ostream) {
-                var currentConnection = this.connection;
-                fnErrorHandler = this.fnOnError;
-                currentConnection.on('connect', function (err) {
+                var self = this;
+                this.connection.on('connect', function (err) {
                     if (err) {
                         console.trace(err);
-                        fnErrorHandler && fnErrorHandler(err, ostream);
+                        self.fnOnError && self.fnOnError(err, ostream);
+                        
+                    } else {
+                        self.connection.execSql(request);
                     }
-                    currentConnection.execSql(request);
                 });
             },
             __createRequest: function(ostream){
                 var Request = require('tedious').Request;
-                var fnErrorHandler = this.fnOnError;
-                var fnDoneHandler = this.fnOnDone;
+                var self = this;
                 var request =
                     new Request(this.sql, 
                             function (err, rowCount) {
                                 try {
                                     if (err) {
-                                        fnErrorHandler && fnErrorHandler(err, ostream);
+                                        self.fnOnError && self.fnOnError(err, ostream);
                                     }
+                                    if(self.isEmptyResponse){
+                                        ostream.write(self.defaultOutput);
+                                    }
+                                } catch (ex) {
+                                    console.write(ex);
                                 }
                                 finally{
-                                    this.connection && this.connection.close();
-                                    fnDoneHandler && fnDoneHandler('Connection closed', ostream);
+                                    self.connection && self.connection.close();
+                                    self.fnOnDone && self.fnOnDone('Connection closed', ostream);
                                 }
                             });
 
@@ -107,6 +77,14 @@ function tediousExpress(req, config){
                 }
                 return request;
             },
+            done: function(fnDone){
+                this.fnOnDone = fnDone;
+                return this;
+            },
+            fail: function(fnFail){
+                this.fnOnError = fnFail;
+                return this;
+            },
             fnOnDone: function(message, ostream) {
                 try{
                     ostream && ostream.end();
@@ -116,11 +94,13 @@ function tediousExpress(req, config){
             },
             fnOnError: function(error, ostream) {
                 try{
-                    ostream && ostream.status(500).end();
+                    ostream && ostream.status(500);
+                    ostream && ostream.write(error.message);
+                    ostream && ostream.end();
                 } catch (ex) {
                     console.warn("Cannot close response after error: " + ex + "\nOriginal error:"+error);
                 }
-                console.error(error);
+                console.trace(error);
             }
         }
     }
