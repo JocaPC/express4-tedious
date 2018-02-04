@@ -1,14 +1,15 @@
 ﻿var TYPES = require('tedious').TYPES;
 
-function tediousExpress(req, config){
+function tediousExpress(config){
+
+    if(arguments.length > 1)
+        throw "Express4/Tedious connector can have just one argument since version 0.3, Remove first argument(request) and leave just connection config object, or use older version.";
     
     return function(sqlQueryText) {
 
         var Connection = require('tedious').Connection;
-        var httpRequest = req;
         
         return {
-            req: httpRequest,
             connection: new Connection(config),
             sql: sqlQueryText,
             parameters: [],
