@@ -56,7 +56,7 @@ function tediousExpress(config){
                             function (err, rowCount) {
                                 try {
                                     if (err) {
-                                        self.fnOnError && self.fnOnError(err, ostream);
+                                        self.fnOnError && self.fnOnError(err, ostream, self.isEmptyResponse);
                                     }
                                     if(self.isEmptyResponse){
                                         ostream.write(self.defaultOutput);
@@ -66,7 +66,7 @@ function tediousExpress(config){
                                 }
                                 finally{
                                     self.connection && self.connection.close();
-                                    self.fnOnDone && self.fnOnDone('Connection closed', ostream);
+                                    self.fnOnDone && self.fnOnDone('Connection closed', ostream, self.isEmptyResponse);
                                 }
                             });
 
